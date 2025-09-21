@@ -14,7 +14,7 @@ from threading import Thread
 # Configurazione Render
 TOKEN = os.environ.get('DISCORD_TOKEN')
 CHANNEL_ID = int(os.environ.get('DISCORD_CHANNEL_ID', 1418196149545730153))
-SERVER_IP = os.environ.get('SERVER_IP', 'il_tuo_server.aternos.me')  # ← MODIFICA!
+SERVER_IP = os.environ.get('SERVER_IP', 'EVLCraft.aternos.me')  # ← MODIFICA!
 
 # Web server per keep-alive
 app = Flask(__name__)
