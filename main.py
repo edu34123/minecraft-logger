@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BOT ATERNOS - Versione Realistica
+BOT ATERNOS - Versione Corretta
 Cosa PUÒ fare nonostante i limiti Aternos
 """
 import discord
@@ -14,7 +14,7 @@ from threading import Thread
 # Configurazione Render
 TOKEN = os.environ.get('DISCORD_TOKEN')
 CHANNEL_ID = int(os.environ.get('DISCORD_CHANNEL_ID', 1418196149545730153))
-SERVER_IP = os.environ.get('SERVER_IP', 'EVLCraft.aternos.me')  # ← MODIFICA!
+SERVER_IP = os.environ.get('SERVER_IP', 'il_tuo_server.aternos.me')  # ← MODIFICA!
 
 # Web server per keep-alive
 app = Flask(__name__)
@@ -105,7 +105,7 @@ class AternosBot(discord.Client):
             )
             embed.add_field(name="🟢 Online", value="Server raggiungibile", inline=True)
             embed.add_field(name="🌐 Host", value="Aternos", inline=True)
-            embed.add_field(name="⚡ Performance", value "Basic (Free Plan)", inline=True)
+            embed.add_field(name="⚡ Performance", value="Basic (Free Plan)", inline=True)  # ← CORRETTO!
             await message.channel.send(embed=embed)
         
         elif message.content.lower() == '!help':
