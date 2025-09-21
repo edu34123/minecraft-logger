@@ -67,7 +67,7 @@ class AternosBot(discord.Client):
                 if channel:
                     embed = discord.Embed(
                         title="📊 Server Aternos",
-                        description=f"**Indirizzo:** `{SERVER_IP}`\n**Porta:** `25565`",
+                        description=f"**Indirizzo:** `{SERVER_IP}`\n**Porta:** `30211`",
                         color=0x0099ff,
                         timestamp=datetime.now()
                     )
