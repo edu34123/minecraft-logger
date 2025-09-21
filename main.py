@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-BOT ATERNOS con Welcome Message Temporaneo
+BOT ATERNOS con Intent Corretti
 """
 import discord
 import asyncio
@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 from flask import Flask, jsonify
 from threading import Thread
+import requests
 from mcstatus import JavaServer
 
 # Configurazione Render
@@ -31,22 +32,23 @@ def health_check():
 
 class AternosBot(discord.Client):
     def __init__(self):
-        intents = discord.Intents.default()
-        intents.message_content = True
-        intents.members = True  # Necessario per vedere i membri
+        # CONFIGURA INTENTS CORRETTI
+        intents = discord.Intents.all()  # ← USA all() PER EVITARE PROBLEMI
         super().__init__(intents=intents)
         self.player_count = 0
         self.max_players = 20
         self.server_online = False
         self.last_players = set()
-        self.welcome_messages = {}
         
     async def on_ready(self):
         print(f'✅ Bot Aternos avviato: {self.user}')
         print(f'🎯 Monitoraggio: {SERVER_IP}')
-        print(f'👋 Welcome messages attivi sul canale: {WELCOME_CHANNEL_ID}')
+        print(f'👋 Welcome messages attivi')
         
-        # Avvia monitoraggio giocatori e welcome messages
+        # Verifica intents
+        print(f'📊 Intents abilitati: {self.intents}')
+        
+        # Avvia monitoraggio giocatori
         self.loop.create_task(self.monitor_players_and_welcome())
 
     async def get_player_list(self):
@@ -54,15 +56,7 @@ class AternosBot(discord.Client):
         try:
             server = JavaServer.lookup(SERVER_IP)
             status = server.status()
-            
-            # Prova a ottenere la lista giocatori (se supportato)
-            try:
-                query = server.query()
-                return query.players.names, status.players.online, status.players.max
-            except:
-                # Fallback a solo conteggio
-                return [], status.players.online, status.players.max
-                
+            return [], status.players.online, status.players.max
         except Exception as e:
             print(f"❌ Errore get players: {e}")
             return [], 0, 20
@@ -75,7 +69,7 @@ class AternosBot(discord.Client):
                 print("❌ Canale welcome non trovato")
                 return
             
-            # Crea messaggio di benvenuto con tag
+            # Messaggio di benvenuto
             embed = discord.Embed(
                 title="🎮 Nuovo Giocatore!",
                 description=f"**{player_name}** si è unito al server!",
@@ -87,22 +81,19 @@ class AternosBot(discord.Client):
             embed.add_field(name="👥 Online", value=f"{self.player_count}/{self.max_players}", inline=True)
             embed.set_footer(text="Messaggio auto-eliminante")
             
-            # Invia il messaggio
+            # Invia e programma eliminazione
             welcome_msg = await channel.send(embed=embed)
             print(f"👋 Welcome message inviato per {player_name}")
             
-            # Programma l'eliminazione dopo 10 secondi
             await asyncio.sleep(10)
             try:
                 await welcome_msg.delete()
                 print(f"🗑️ Messaggio eliminato per {player_name}")
-            except discord.NotFound:
-                print(f"⚠️ Messaggio già eliminato per {player_name}")
-            except Exception as e:
-                print(f"❌ Errore eliminazione messaggio: {e}")
+            except:
+                print(f"⚠️ Messaggio già eliminato")
                 
         except Exception as e:
-            print(f"❌ Errore invio welcome: {e}")
+            print(f"❌ Errore welcome message: {e}")
 
     async def monitor_players_and_welcome(self):
         """Monitora i giocatori e invia welcome messages"""
@@ -110,7 +101,7 @@ class AternosBot(discord.Client):
         
         while not self.is_closed():
             try:
-                # Ottieni lista giocatori attuali
+                # Ottieni lista giocatori
                 current_players, online_count, max_players = await self.get_player_list()
                 current_set = set(current_players)
                 
@@ -118,18 +109,15 @@ class AternosBot(discord.Client):
                 self.player_count = online_count
                 self.max_players = max_players
                 
-                # Trova nuovi giocatori
-                new_players = current_set - self.last_players
+                # Trova nuovi giocatori (simulato per test)
+                if current_players:
+                    new_players = current_set - self.last_players
+                    for player in new_players:
+                        print(f"🎮 Nuovo giocatore: {player}")
+                        self.loop.create_task(self.send_temp_welcome(player))
                 
-                # Invia welcome messages per nuovi giocatori
-                for player in new_players:
-                    print(f"🎮 Nuovo giocatore rilevato: {player}")
-                    self.loop.create_task(self.send_temp_welcome(player))
-                
-                # Aggiorna ultima lista
                 self.last_players = current_set
-                
-                await asyncio.sleep(30)  # Controlla ogni 30 secondi
+                await asyncio.sleep(30)
                 
             except Exception as e:
                 print(f"❌ Errore monitoraggio: {e}")
@@ -146,42 +134,30 @@ class AternosBot(discord.Client):
                 embed = discord.Embed(
                     title="👥 Giocatori Online",
                     description=f"**Server:** `{SERVER_IP}`",
-                    color=0x00ff00 if online > 0 else 0xff0000,
-                    timestamp=datetime.now()
+                    color=0x00ff00 if online > 0 else 0xff0000
                 )
-                
-                if players_list:
-                    players_text = "\n".join([f"• {player}" for player in players_list])
-                    embed.add_field(name="Giocatori Connessi", value=players_text, inline=False)
-                else:
-                    embed.add_field(name="Giocatori", value="Nessun giocatore online", inline=False)
                 
                 embed.add_field(name="Online", value=f"**{online}**", inline=True)
                 embed.add_field(name="Massimo", value=f"**{max_players}**", inline=True)
-                embed.set_footer(text="Aggiornato in tempo reale")
+                embed.set_footer(text="Use !ip per connetterti")
                 
                 await message.channel.send(embed=embed)
                 
             except Exception as e:
-                await message.channel.send("❌ Impossibile ottenere la lista giocatori")
+                await message.channel.send("❌ Impossibile ottenere i dati")
         
         elif message.content.lower() == '!welcome':
-            """Comando per testare il welcome message"""
-            try:
-                test_player = "TestPlayer"
-                await message.channel.send(f"🧪 Test welcome message per {test_player}...")
-                await self.send_temp_welcome(test_player)
-            except Exception as e:
-                await message.channel.send(f"❌ Errore test: {e}")
+            """Test welcome message"""
+            await message.channel.send("🧪 Test welcome message...")
+            await self.send_temp_welcome("TestPlayer")
         
         elif message.content.lower() == '!ip':
             embed = discord.Embed(
                 title="📍 Connetti al Server",
-                description=f"**Indirizzo:**\n`{SERVER_IP}`\n\n**Porta:**\n`25565`",
+                description=f"**Indirizzo:** `{SERVER_IP}`\n**Porta:** `25565`",
                 color=0x7289da
             )
-            embed.add_field(name="Giocatori Online", value=f"{self.player_count}/{self.max_players}", inline=True)
-            embed.set_footer(text="Copia l'indirizzo in Minecraft")
+            embed.add_field(name="Giocatori", value=f"{self.player_count}/{self.max_players}", inline=True)
             await message.channel.send(embed=embed)
 
 def run_web_server():
@@ -189,20 +165,24 @@ def run_web_server():
     app.run(host='0.0.0.0', port=10000)
 
 async def main():
-    print("🎮 Avvio Bot Aternos con Welcome Messages...")
-    print("👋 Messaggi temporanei attivi per nuovi giocatori")
+    print("🎮 Avvio Bot Aternos...")
+    print("🔧 Assicurati di aver abilitato gli intents su Discord Developer!")
     
-    # Avvia web server in background
+    # Avvia web server
     web_thread = Thread(target=run_web_server, daemon=True)
     web_thread.start()
     
-    # Avvia bot Discord
+    # Avvia bot
     bot = AternosBot()
     
     try:
         await bot.start(TOKEN)
     except discord.LoginFailure:
         print("❌ Token errato! Controlla DISCORD_TOKEN")
+    except discord.PrivilegedIntentsRequired:
+        print("❌ PRIVILEGED INTENTS REQUIRED!")
+        print("Vai su: https://discord.com/developers/applications")
+        print("Bot → Abilita PRESENCE INTENT, SERVER MEMBERS INTENT, MESSAGE CONTENT INTENT")
     except Exception as e:
         print(f"❌ Errore: {e}")
 
