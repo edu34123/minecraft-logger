@@ -10,7 +10,6 @@ import json
 from datetime import datetime
 from flask import Flask, jsonify
 from threading import Thread
-import requests
 import socket
 import mcstatus
 
